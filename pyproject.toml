@@ -21,13 +21,17 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.6"
 matplotlib = "^3.3.2"
-nautobot = "^1.0.0-alpha.1"
+nautobot = "~1.0"
 nautobot-plugin-nornir = "^0.9.0"
+django-debug-toolbar = "^3.2.1"
+astroid = "^2.5.5"
+nornir-nautobot = {git = "https://github.com/nautobot/nornir-nautobot.git", rev = "nextgen"}
+django-pivot = "^1.8.1"
 
 [tool.poetry.dev-dependencies]
 black = "^20.8b1"
 bandit = "^1.6.2"
-pylint = "^2.5.2"
+pylint = "2.7.4"
 pylint-django = "^2.0.15"
 pydocstyle = "^5.0.2"
 flake8 = "^3.8.4"

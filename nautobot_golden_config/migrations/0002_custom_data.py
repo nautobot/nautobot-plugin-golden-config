@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     def insertData(apps, schema_editor):
         GoldenConfigSettings = apps.get_model("nautobot_golden_config", "GoldenConfigSettings")
-        global_settings = GoldenConfigSettings.objects.create(id="aaaaaaaa-0000-0000-0000-000000000001")
+        global_settings = GoldenConfigSettings.objects.create()
         global_settings.save()
 
     operations = [

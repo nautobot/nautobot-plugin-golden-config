@@ -17,7 +17,12 @@ from nautobot_plugin_nornir.plugins.inventory.nautobot_orm import NautobotORMInv
 from nautobot_plugin_nornir.constants import NORNIR_SETTINGS
 
 from nautobot_golden_config.models import GoldenConfigSettings, GoldenConfiguration
-from nautobot_golden_config.utilities.helper import get_allowed_os, verify_global_settings, check_jinja_template
+from nautobot_golden_config.utilities.helper import (
+    get_job_filter,
+    get_dispatcher,
+    verify_global_settings,
+    check_jinja_template,
+)
 from nautobot_golden_config.utilities.graphql import graph_ql_query
 from .processor import ProcessGoldenConfig
 
@@ -66,6 +71,7 @@ def run_template(  # pylint: disable=too-many-arguments
         jinja_template=jinja_template,
         jinja_root_path=jinja_root_path,
         output_file_location=output_file_location,
+        default_drivers_mapping=get_dispatcher(),
     )[1].result["config"]
     intended_obj.intended_last_success_date = task.host.defaults.data["now"]
     intended_obj.intended_config = generated_config
@@ -80,7 +86,7 @@ def config_intended(job_result, data, jinja_root_path, intended_root_folder):
     """Nornir play to generate configurations."""
     now = datetime.now()
     logger = NornirLogger(__name__, job_result, data.get("debug"))
-    global_settings = GoldenConfigSettings.objects.get(id="aaaaaaaa-0000-0000-0000-000000000001")
+    global_settings = GoldenConfigSettings.objects.first()
     verify_global_settings(logger, global_settings, ["jinja_path_template", "intended_path_template", "sot_agg_query"])
     nornir_obj = InitNornir(
         runner=NORNIR_SETTINGS.get("runner"),
@@ -90,7 +96,7 @@ def config_intended(job_result, data, jinja_root_path, intended_root_folder):
             "options": {
                 "credentials_class": NORNIR_SETTINGS.get("credentials"),
                 "params": NORNIR_SETTINGS.get("inventory_params"),
-                "queryset": get_allowed_os(data),
+                "queryset": get_job_filter(data),
                 "defaults": {"now": now},
             },
         },

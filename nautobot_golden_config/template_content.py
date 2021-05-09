@@ -4,7 +4,6 @@ from nautobot.extras.plugins import PluginTemplateExtension
 
 from .models import ConfigCompliance, GoldenConfiguration
 from .utilities.constant import ENABLE_COMPLIANCE, CONFIG_FEATURES
-from .utilities.helper import get_allowed_os_from_nested
 
 
 class ConfigComplianceDeviceCheck(PluginTemplateExtension):  # pylint: disable=abstract-method
@@ -18,11 +17,7 @@ class ConfigComplianceDeviceCheck(PluginTemplateExtension):  # pylint: disable=a
 
     def right_page(self):
         """Content to add to the configuration compliance."""
-        comp_obj = (
-            ConfigCompliance.objects.filter(**get_allowed_os_from_nested())
-            .filter(device=self.get_device())
-            .values("feature", "compliance")
-        )
+        comp_obj = ConfigCompliance.objects.filter(device=self.get_device()).values("rule__feature__name", "compliance")
         extra_context = {
             "compliance": comp_obj,
             "device": self.get_device(),
@@ -46,16 +41,16 @@ class ConfigComplianceSiteCheck(PluginTemplateExtension):  # pylint: disable=abs
     def right_page(self):
         """Content to add to the configuration compliance."""
         comp_obj = (
-            ConfigCompliance.objects.values("feature")
-            .filter(**get_allowed_os_from_nested())
+            ConfigCompliance.objects.values("rule__feature__name")
             .filter(device__site__slug=self.get_site_slug().slug)
             .annotate(
-                compliant=Count("feature", filter=Q(compliance=True)),
-                non_compliant=Count("feature", filter=~Q(compliance=True)),
+                count=Count("rule__feature__name"),
+                compliant=Count("rule__feature__name", filter=Q(compliance=True)),
+                non_compliant=Count("rule__feature__name", filter=~Q(compliance=True)),
             )
-            .values("feature", "compliant", "non_compliant")
+            .order_by("rule__feature__name")
+            .values("rule__feature__name", "compliant", "non_compliant")
         )
-
         extra_context = {"compliance": comp_obj, "template_type": "site"}
         return self.render(
             "nautobot_golden_config/content_template.html",
@@ -74,9 +69,7 @@ class ConfigDeviceDetails(PluginTemplateExtension):  # pylint: disable=abstract-
 
     def right_page(self):
         """Content to add to the configuration compliance."""
-        golden_config = (
-            GoldenConfiguration.objects.filter(**get_allowed_os_from_nested()).filter(device=self.get_device()).first()
-        )
+        golden_config = GoldenConfiguration.objects.filter(device=self.get_device()).first()
         extra_context = {
             "device": self.get_device(),  # device,
             "golden_config": golden_config,

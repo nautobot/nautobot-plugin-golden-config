@@ -38,20 +38,57 @@ Each Job attempts to provide sane error handling, and respects the `debug` flag 
 
 The golden configuration plugin settings can be found by navigating to `Plugins -> Settings` button. Under the `Golden Configuration` section.
 
-![Navigate to Compliance Rules](./img/navigate-compliance-rules.png)
+![Navigate to Settings](./img/navigate-compliance-rules.png)
 
-To configure or update the settings click `Edit`.
-
-Next fill out the Settings.
+To configure or update the settings click the pencil icon to edit.
 
 |Setting|Explanation|
 |:--|:--|
+|Backup Repository | This is the Git Repository where your backup configurations will be found. |
 |Backup Path|This represents the Jinja path where the backup files will be found.  The variable `obj` is available as the device instance object of a given device, as is the case for all Jinja templates. e.g. `{{obj.site.slug}}/{{obj.name}}.cfg`|
+|Intended Repository | This is the Git Repository where your backup configurations will be found. |
 |Intended Path|The Jinja path representation of where the generated file will be places. e.g. `{{obj.site.slug}}/{{obj.name}}.cfg`|
-|Template Path|The Jinja path representation of where the Jinja temaplte can be found. e.g. `{{obj.platform.slug}}.j2`|
-|GraphQL Query|A query that is evaluated and used to render the config. The query must start with `query ($device: String!)`.|
+|Jinja Repository | This is the Git Repository where your jinja templates will be found. |
+|Jinja Path|The Jinja path representation of where the Jinja temaplte can be found. e.g. `{{obj.platform.slug}}.j2`|
+|Scope| This is where the scope of devices to be considered within Golden Config is defined. |
+|GraphQL Query|A query that is evaluated and used to render the config. The query must start with `query ($device_id: ID!)`.|
 
 > Note: Each of these will be further detailed in their respective sections.
+
+## Scope
+
+The scope, is a JSON blob that describes a filter that will provide the list of devices to be allowed whenever a job is ran. A job can optionally further refine the scope, but the outbound would be based on what is defined here. The options are best described by leveraging the Devices list view, search features (the filtering shown on the side of the Devices.) Building a query there, will provide the exact keys expected.
+
+Filtering to specific platforms, based on their slug.
+
+```json
+{
+  "platform": [
+    "cisco_ios",
+    "cisco_nxos",
+    "arista_eos",
+    "juniper_junos"
+  ]
+}
+```
+
+> Note: The Platform slug is an important value, see the [FAQ](./FAQ.md) for further details.
+
+Adding a "has_primary_ip" check. 
+
+```json
+{
+  "platform": [
+    "cisco_ios",
+    "cisco_nxos",
+    "arista_eos",
+    "juniper_junos"
+  ],
+  "has_primary_ip": "True"
+}
+```
+
+When viewing the settings, the scope of devices is actually a link to the query built in the Devices view. Click that link to understand which devices are permitted by the filter.
 
 # Git Settings
 
@@ -107,7 +144,7 @@ The plugin makes use of template content `right_page` in order to use display in
 
 # API
 
-There is no way to currently run the script via an API, this would be helpful to use in the configuration compliance workflow, and will be a future feature.
+To run the job programmactially, reference the [nautobot documentation](https://nautobot.readthedocs.io/en/stable/additional-features/jobs/#via-the-api) for the proper API call. Pay special attention to the `class_path` defintion.
 
 # Feature Enablement
 

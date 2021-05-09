@@ -55,13 +55,13 @@
         transform: scale(1.1);
     }
 </style>
-<h1>{% block title %}Configuration Compliance - {{ device_name }}{% endblock %}</h1>
+<h1>{% block title %}Configuration Compliance - {{ device.name }}{% endblock %}</h1>
 {% block navigation %}
 <div class="panel panel-default" style="width:100%">
         <div class="panel-heading"><strong>Feature Navigation</strong> 
-            <a href="{% url 'plugins:nautobot_golden_config:device_filter_report' device_name=device_name compliance='compliant' %}" class="btn btn-success">Compliant</a> 
-            <a href="{% url 'plugins:nautobot_golden_config:device_filter_report' device_name=device_name compliance='non-compliant' %}" class="btn btn-danger">Non-Compliant</a>
-            <a href="{% url 'plugins:nautobot_golden_config:device_report' device_name=device_name %}" class="btn btn-info">Clear</a>  
+            <a href="{% url 'plugins:nautobot_golden_config:configcompliance_filter_report' pk=device.pk compliance='compliant' %}" class="btn btn-success">Compliant</a> 
+            <a href="{% url 'plugins:nautobot_golden_config:configcompliance_filter_report' pk=device.pk compliance='non-compliant' %}" class="btn btn-danger">Non-Compliant</a>
+            <a href="{% url 'plugins:nautobot_golden_config:configcompliance' pk=device.pk %}" class="btn btn-info">Clear</a>  
         </div>
     <div id="navigation">
         <table>
@@ -72,8 +72,8 @@
                 {% else %}
                     <td style="background-color: #d9534f;">
                 {% endif %}
-                    <a href="#{{ item.feature }}">
-                        {{ item.feature }}
+                    <a href="#{{ item.rule }}">
+                        {{ item.rule }}
                     </a>
                 </td>
                 {% if forloop.counter|divisibleby:"5" %}
@@ -87,12 +87,12 @@
 </div>
 {% endblock %}
 {% for item in compliance_details %}
-    <div id="{{ item.feature }}" class="panel panel-default" style="width:100%">
-        <div class="panel-heading"><strong>{{ item.feature|upper }}</strong></div>
+    <div id="{{ item.rule }}" class="panel panel-default" style="width:100%">
+        <div class="panel-heading"><strong>{{ item.rule.feature.name|upper }}</strong></div>
         <table id="content">
         <tr>
             <td style="width:250px">Status</td>
-            {% if item.ordered %}
+            {% if item.rule.config_ordered %}
                 {% if item.compliance %}
                     <td><span class="label label-success">Compliant</span> <span><i class="mdi mdi-sort" title="Ordered Configuration Test"></i></span></td>
                 {% else %}
@@ -107,7 +107,7 @@
             {% endif %}
 
         </tr>
-        {% if item.compliance and not item.ordered %}
+        {% if item.compliance and not item.rule.config_ordered %}
             <tr>
                 <td style="width:250px">Intended Configuration</td>
                 <td class="config_hover">
@@ -205,7 +205,7 @@
 {% endfor %}
 <script type="text/javascript">
     function copyToClipboard(config_value) {
-        var $temp = $("<input>");
+        var $temp = $("<textarea>");
         $("body").append($temp);
         $temp.val(config_value).select();
         document.execCommand("copy");

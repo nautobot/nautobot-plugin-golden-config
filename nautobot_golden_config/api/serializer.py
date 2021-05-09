@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from nautobot_golden_config.models import BackupConfigLineRemove, BackupConfigLineReplace
+from nautobot_golden_config.models import ConfigRemove, ConfigReplace
 
 
 class GraphQLSerializer(serializers.Serializer):  # pylint: disable=abstract-method
@@ -17,7 +17,7 @@ class LineRemoveSerializer(serializers.ModelSerializer):
     class Meta:
         """Set Meta Data for Line Removal, will serialize all fields."""
 
-        model = BackupConfigLineRemove
+        model = ConfigRemove
         fields = "__all__"
 
 
@@ -27,5 +27,5 @@ class LineReplaceSerializer(serializers.ModelSerializer):
     class Meta:
         """Set Meta Data for Line Replacements, will serialize all fields."""
 
-        model = BackupConfigLineReplace
+        model = ConfigReplace
         fields = "__all__"

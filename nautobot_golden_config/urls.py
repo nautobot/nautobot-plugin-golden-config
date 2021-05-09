@@ -1,24 +1,47 @@
 """Django urlpatterns declaration for config compliance plugin."""
 from django.urls import path
 
-from . import views
+from nautobot.extras.views import ObjectChangeLogView
+from . import views, models
 
 app_name = "nautobot_golden_config"
 
 urlpatterns = [
-    path("home/", views.Home.as_view(), name="home"),
-    path("home/delete/", views.HomeBulkDeleteView.as_view(), name="home_bulk_delete"),
-    path("report/", views.ComplianceReport.as_view(), name="config_report"),
-    path("report/<str:device_name>", views.ComplianceDeviceReport.as_view(), name="device_report"),
+    path("golden/", views.GoldenConfigurationListView.as_view(), name="goldenconfiguration_list"),
+    path("golden/delete/", views.GoldenConfigurationBulkDeleteView.as_view(), name="goldenconfiguration_bulk_delete"),
+    path("config-compliance/", views.ConfigComplianceListView.as_view(), name="configcompliance_list"),
+    path("config-compliance/delete/", views.ConfigComplianceBulkDeleteView.as_view(), name="compliance_bulk_delete"),
+    path("config-compliance/overview/", views.ConfigComplianceOverview.as_view(), name="configcompliance_report"),
+    path("config-compliance/<uuid:pk>", views.ConfigComplianceView.as_view(), name="configcompliance"),
     path(
-        "report/<str:device_name>/<str:compliance>/",
-        views.ComplianceDeviceFilteredReport.as_view(),
-        name="device_filter_report",
+        "config-compliance/<uuid:pk>/delete/",
+        views.ConfigComplianceDeleteView.as_view(),
+        name="configcompliance_delete",
     ),
-    path("report/delete/", views.ComplianceBulkDeleteView.as_view(), name="compliance_bulk_delete"),
-    path("overview-report/", views.ComplianceOverviewReport.as_view(), name="compliance_overview_report"),
-    path("config-details/<str:device_name>/<str:config_type>/", views.ConfigDetails.as_view(), name="config_details"),
-    path("compliance-features/", views.ComplianceFeatureView.as_view(), name="compliancefeature_list"),
+    path(
+        "config-compliance/<uuid:pk>/<str:config_type>/",
+        views.ConfigComplianceDetails.as_view(),
+        name="configcompliance_details",
+    ),
+    path(
+        "config-compliance/filtered/<uuid:pk>/<str:compliance>/",
+        views.ComplianceDeviceFilteredReport.as_view(),
+        name="configcompliance_filter_report",
+    ),
+    path("compliance-rules/", views.ComplianceRuleListView.as_view(), name="compliancerule_list"),
+    path("compliance-rules/add/", views.ComplianceRuleEditView.as_view(), name="compliancerule_add"),
+    path(
+        "compliance-rules/delete/",
+        views.ComplianceRuleBulkDeleteView.as_view(),
+        name="compliancerule_bulk_delete",
+    ),
+    path("compliance-rules/<uuid:pk>/edit/", views.ComplianceRuleEditView.as_view(), name="compliancerule_edit"),
+    path(
+        "compliance-rules/<uuid:pk>/delete/",
+        views.ComplianceRuleDeleteView.as_view(),
+        name="compliancerule_delete",
+    ),
+    path("compliance-features/", views.ComplianceFeatureListView.as_view(), name="compliancefeature_list"),
     path("compliance-features/add/", views.ComplianceFeatureEditView.as_view(), name="compliancefeature_add"),
     path(
         "compliance-features/delete/",
@@ -34,25 +57,50 @@ urlpatterns = [
         name="compliancefeature_delete",
     ),
     path("settings/", views.GoldenConfigSettingsView.as_view(), name="goldenconfigsettings"),
-    path("settings/<uuid:pk>/edit/", views.GoldenConfigSettingsEditView.as_view(), name="goldenconfigsettings_edit"),
-    path("line-removal/", views.BackupConfigLineRemovalView.as_view(), name="backuplineremoval"),
-    path("line-removal/add/", views.BackupConfigLineRemovalEditView.as_view(), name="backuplineremoval_add"),
+    path("settings/edit/", views.GoldenConfigSettingsEditView.as_view(), name="goldenconfigsettings_edit"),
     path(
-        "line-removal/<uuid:pk>/edit/", views.BackupConfigLineRemovalEditView.as_view(), name="backuplineremoval_edit"
+        "settings/changelog/",
+        ObjectChangeLogView.as_view(),
+        name="goldenconfigsettings_changelog",
+        kwargs={"model": models.GoldenConfigSettings},
+    ),
+    path("line-removal/", views.ConfigRemoveListView.as_view(), name="configremove_list"),
+    path("line-removal/add/", views.ConfigRemoveEditView.as_view(), name="configremove_add"),
+    path(
+        "line-removal/import/",
+        views.ConfigRemoveBulkImportView.as_view(),
+        name="configremove_import",
+    ),
+    path(
+        "line-removal/edit/",
+        views.ConfigRemoveBulkEditView.as_view(),
+        name="configremove_bulk_edit",
     ),
     path(
         "line-removal/delete/",
-        views.BackupConfigLineRemovalBulkDeleteView.as_view(),
-        name="backuplineremoval_bulk_delete",
+        views.ConfigRemoveBulkDeleteView.as_view(),
+        name="configremove_bulk_delete",
     ),
-    path("line-replace/", views.BackupConfigLineReplaceView.as_view(), name="backuplinereplace"),
-    path("line-replace/add/", views.BackupConfigLineReplaceEditView.as_view(), name="backuplinereplace_add"),
+    path("line-removal/<uuid:pk>/", views.ConfigRemoveView.as_view(), name="configremove"),
     path(
-        "line-replace/<uuid:pk>/edit/", views.BackupConfigLineReplaceEditView.as_view(), name="backuplinereplace_edit"
+        "line-removal/<uuid:pk>/edit/",
+        views.ConfigRemoveEditView.as_view(),
+        name="configremove_edit",
     ),
+    path("line-replace/", views.ConfigReplaceListView.as_view(), name="configreplace_list"),
+    path("line-replace/add/", views.ConfigReplaceEditView.as_view(), name="configreplace_add"),
+    path("line-replace/import/", views.ConfigReplaceBulkImportView.as_view(), name="configreplace_import"),
+    path("line-replace/edit/", views.ConfigReplaceBulkEditView.as_view(), name="configreplace_bulk_edit"),
     path(
         "line-replace/delete/",
-        views.BackupConfigLineReplaceBulkDeleteView.as_view(),
-        name="backuplinereplace_bulk_delete",
+        views.ConfigReplaceBulkDeleteView.as_view(),
+        name="configreplace_bulk_delete",
+    ),
+    path("line-replace/<uuid:pk>/", views.ConfigReplaceView.as_view(), name="configreplace"),
+    path("line-replace/<uuid:pk>/edit/", views.ConfigReplaceEditView.as_view(), name="configreplace_edit"),
+    path(
+        "line-replace/delete/",
+        views.ConfigReplaceBulkDeleteView.as_view(),
+        name="configreplace_bulk_delete",
     ),
 ]

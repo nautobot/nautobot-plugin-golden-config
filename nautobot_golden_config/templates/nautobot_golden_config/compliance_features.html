@@ -6,13 +6,8 @@
     {% if perms.nautobot_golden_config.add_compliancefeature %}
         {% add_button 'plugins:nautobot_golden_config:compliancefeature_add' %}
     {% endif %}
-    {% if perms.nautobot_golden_config.change_goldenconfigsettings %}
-        <a href="{% url 'plugins:nautobot_golden_config:goldenconfigsettings_edit' pk='aaaaaaaa-0000-0000-0000-000000000001' %}" class="btn btn-warning">
-            <span class="mdi mdi-pencil" aria-hidden="true"></span> Setting
-        </a>
-    {% endif %}
 </div>
-<h1>{% block title %}Compliance Rules{% endblock %}</h1>
+<h1>{% block title %}Compliance Features{% endblock %}</h1>
 <div class="row">
 	<div class="col-md-9">
         {% include 'utilities/obj_table.html' with bulk_delete_url="plugins:nautobot_golden_config:compliancefeature_bulk_delete" %}
