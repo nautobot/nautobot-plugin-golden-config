@@ -1,9 +1,5 @@
 # Frequently Asked Questions
 
-_Why must a device name be unique?_
-
-The APIs and other components rely on a single device, such as the ability to perform an API call to `sotagg/<str:device_name>/`. This is a challenge that may be affected by decisions made to the core platform. For the time being, it is a requirement.
-
 _Why don't the configurations match like the vendor cli?_
 
 A vendor processes configuration understanding constructs such as knowing that `int g0/0` and `interface GigabitEthernet0/0` are the same. Each one of these 
@@ -64,4 +60,4 @@ out-of-scope for the plugin.
 _Why does the compliance section scroll so much?_
 
 The real estate optimizations is not the best for the configuration compliance overview right now. Users are suggested to review the best practices
-described in the configuration compliance section. Over time, the hope is to optimize this
+described in the configuration compliance section. Over time, the hope is to optimize this.

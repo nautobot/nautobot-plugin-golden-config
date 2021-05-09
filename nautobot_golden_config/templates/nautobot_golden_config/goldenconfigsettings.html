@@ -1,18 +1,106 @@
 {% extends 'base.html' %}
 {% load buttons %}
+{% load static %}
+{% load custom_links %}
+{% load helpers %}
+
+{% block title %}{{ object }}{% endblock %}
+
+{% block header %}
+    <div class="row noprint">
+        <div class="col-sm-8 col-md-9">
+            <ol class="breadcrumb">
+                <li>Golden Configuration Settings</li>
+                <li><a href="{% url 'plugins:nautobot_golden_config:goldenconfigsettings_edit' %}">Settings</a></li>
+                <li>{{ object }}</li>
+            </ol>
+        </div>
+        <div class="col-sm-4 col-md-3">
+            <form action="{% url 'plugins:nautobot_golden_config:goldenconfigsettings' %}" method="get">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" />
+                    <span class="input-group-btn">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="mdi mdi-magnify" aria-hidden="true"></span>
+                        </button>
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="pull-right noprint">
+        {% comment %}
+        {% if perms.nautobot_golden_config.change_goldenconfigsettings %}
+            {% edit_button object %}
+        {% endif %}
+        {% endcomment %}
+    </div>
+    <h1>{{ object }}</h1>
+    {% include 'inc/created_updated.html' %}
+    <div class="pull-right noprint">
+        {% custom_links object %}
+    </div>
+    <ul class="nav nav-tabs">
+        <li role="presentation"{% if not active_tab %} class="active"{% endif %}>
+            <a href="{{ object.get_absolute_url }}">Settings</a>
+        </li>
+        {% if perms.extras.view_objectchange %}
+            <li role="presentation"{% if active_tab == 'changelog' %} class="active"{% endif %}>
+                <a href="{% url 'plugins:nautobot_golden_config:goldenconfigsettings_changelog' %}">Change Log</a>
+            </li>
+        {% endif %}
+    </ul>
+{% endblock %}
 
 {% block content %}
-<div class="pull-right noprint">
-    {% if perms.nautobot_golden_config.change_goldenconfigsettings %}
-        <a href="{% url 'plugins:nautobot_golden_config:goldenconfigsettings_edit' pk='aaaaaaaa-0000-0000-0000-000000000001' %}" class="btn btn-warning">
-            <span class="mdi mdi-pencil" aria-hidden="true"></span> Edit
-        </a>
-    {% endif %}
-</div>
-<h1>{% block title %}Golden Config Settings{% endblock %}</h1>
 <div class="row">
-	<div class="col-md-10">
-        {% include 'utilities/obj_table.html' %}
+	<div class="col-md-4">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <strong>Outside Zone</strong>
+            </div>
+            <table class="table table-hover panel-body attr-table">
+                <tr>
+                    <td>Backup Repository</td>
+                    <td>{{ object.backup_repository }}</td>
+                </tr>
+                <tr>
+                    <td>Backup Path Template</td>
+                    <td>{{ object.backup_path_template }}</td>
+                </tr>
+                <tr>
+                    <td>Intended Repository</td>
+                    <td>{{ object.intended_repository }}</td>
+                </tr>
+                <tr>
+                    <td>Intended Path Template</td>
+                    <td>{{ object.intended_path_template }}</td>
+                </tr>
+                <tr>
+                    <td>Jinja Repository</td>
+                    <td>{{ object.jinja_repository }}</td>
+                </tr>
+                <tr>
+                    <td>Jinja Path Template</td>
+                    <td>{{ object.jinja_path_template }}</td>
+                </tr>
+                <tr>
+                    <td>Backup Test Connectivity</td>
+                    <td>{{ object.backup_test_connectivity }}</td>
+                </tr>
+                <tr>
+                    <td><a href="{{ object.get_url_to_filtered_device_list }}">Scope of Devices</td>
+                    <td>{{ object.scope }}</a></td>
+                </tr>
+                <tr>
+                    <td>SoT Aggregation Query</td>
+                    <td>{{ object.sot_agg_query }}</td>
+                </tr>
+        </div>
+    </table>
+</div>
+        {% include 'inc/custom_fields_panel.html' %}
+        {% include 'inc/relationships_panel.html' %}
     </div>
 </div>
 {% endblock %}

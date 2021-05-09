@@ -8,12 +8,12 @@ from . import views
 app_name = "nautobot_golden_config"
 
 router = routers.DefaultRouter()
-router.register("line_remove", views.BackupConfigLineRemovalViewSet)
-router.register("line_replace", views.BackupConfigLineReplaceViewSet)
+router.register("line_remove", views.ConfigRemoveViewSet)
+router.register("line_replace", views.ConfigReplaceViewSet)
 urlpatterns = router.urls
 urlpatterns += [
     path(
-        "sotagg/<str:device_name>/",
+        "sotagg/<uuid:pk>/",
         views.SOTAggDeviceDetailView.as_view(),
         name="device_detail",
     )

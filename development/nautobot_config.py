@@ -1,11 +1,31 @@
-"""Nautobot configuration."""
+"""Nautobot config."""
+# pylint: disable=invalid-envvar-default
+#########################
+#                       #
+#   Required settings   #
+#                       #
+#########################
+
 import os
 import sys
 
 from distutils.util import strtobool
-
 from django.core.exceptions import ImproperlyConfigured
-from nautobot.core.settings import *  # noqa: F401,F403 pylint: disable=wildcard-import,unused-wildcard-import
+from nautobot.core.settings import *  # noqa: F401,F403 #pylint: disable=wildcard-import, unused-wildcard-import
+
+# Enforce required configuration parameters
+for key in [
+    "ALLOWED_HOSTS",
+    "POSTGRES_DB",
+    "POSTGRES_USER",
+    "POSTGRES_HOST",
+    "POSTGRES_PASSWORD",
+    "REDIS_HOST",
+    "REDIS_PASSWORD",
+    "SECRET_KEY",
+]:
+    if not os.environ.get(key):
+        raise ImproperlyConfigured(f"Required environment variable {key} is missing.")
 
 
 def is_truthy(arg):
@@ -24,47 +44,25 @@ def is_truthy(arg):
     return bool(strtobool(arg))
 
 
-# Enforce required configuration parameters
-for key in [
-    "ALLOWED_HOSTS",
-    "POSTGRES_DB",
-    "POSTGRES_USER",
-    "POSTGRES_HOST",
-    "POSTGRES_PASSWORD",
-    "REDIS_HOST",
-    "REDIS_PASSWORD",
-    "SECRET_KEY",
-]:
-    if not os.environ.get(key):
-        raise ImproperlyConfigured(f"Required environment variable {key} is missing.")
-
-# For reference see https://nautobot.readthedocs.io/en/latest/configuration/required-settings/
-# Based on config from nautobot-server init
-
-#########################
-#                       #
-#   Required settings   #
-#                       #
-#########################
+TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 
 # This is a list of valid fully-qualified domain names (FQDNs) for the Nautobot server. Nautobot will not permit write
 # access to the server via any other hostnames. The first FQDN in the list will be treated as the preferred name.
 #
 # Example: ALLOWED_HOSTS = ['nautobot.example.com', 'nautobot.internal.local']
-ALLOWED_HOSTS = os.environ["ALLOWED_HOSTS"].split(" ")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(" ")
 
 # PostgreSQL database configuration. See the Django documentation for a complete list of available parameters:
 #   https://docs.djangoproject.com/en/stable/ref/settings/#databases
-DATABASE_PORT = 5432 if not os.environ.get("POSTGRES_PORT", False) else int(os.environ["POSTGRES_PORT"])
 DATABASES = {
     "default": {
-        "NAME": os.getenv("POSTGRES_DB", ""),  # Database name
+        "NAME": os.getenv("POSTGRES_DB", "nautobot"),  # Database name
         "USER": os.getenv("POSTGRES_USER", ""),  # Database username
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),  # Datbase password
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),  # Database server
-        "PORT": DATABASE_PORT,  # Database port (leave blank for default)
-        "CONN_MAX_AGE": int(os.environ.get("NAUTOBOT_DB_TIMEOUT", 300)),  # Database timeout
-        "ENGINE": "django.db.backends.postgresql",  # Database driver (Postres only supported!)
+        "PORT": os.getenv("POSTGRES_PORT", ""),  # Database port (leave blank for default)
+        "CONN_MAX_AGE": os.getenv("POSTGRES_TIMEOUT", 300),  # Database timeout
+        "ENGINE": "django.db.backends.postgresql",  # Database driver (Postgres only supported!)
     }
 }
 
@@ -72,11 +70,27 @@ DATABASES = {
 # For detailed configuration see: https://github.com/rq/django-rq#installation
 RQ_QUEUES = {
     "default": {
-        "HOST": os.environ["REDIS_HOST"],
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
+        "HOST": os.getenv("REDIS_HOST", "localhost"),
+        "PORT": os.getenv("REDIS_PORT", 6379),
         "DB": 0,
-        "PASSWORD": os.environ["REDIS_PASSWORD"],
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
+        "SSL": os.getenv("REDIS_SSL", False),
+        "DEFAULT_TIMEOUT": 300,
+    },
+    "webhooks": {
+        "HOST": os.getenv("REDIS_HOST", "localhost"),
+        "PORT": os.getenv("REDIS_PORT", 6379),
+        "DB": 0,
+        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
+        "SSL": os.getenv("REDIS_SSL", False),
+        "DEFAULT_TIMEOUT": 300,
+    },
+    "custom_fields": {
+        "HOST": os.getenv("REDIS_HOST", "localhost"),
+        "PORT": os.getenv("REDIS_PORT", 6379),
+        "DB": 0,
+        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
+        "SSL": os.getenv("REDIS_SSL", False),
         "DEFAULT_TIMEOUT": 300,
     },
     # "with-sentinel": {
@@ -93,29 +107,28 @@ RQ_QUEUES = {
     #     },
     # },
     "check_releases": {
-        "HOST": os.environ["REDIS_HOST"],
-        "PORT": int(os.environ.get("REDIS_PORT", 6379)),
+        "HOST": os.getenv("REDIS_HOST", "localhost"),
+        "PORT": os.getenv("REDIS_PORT", 6379),
         "DB": 0,
-        "PASSWORD": os.environ["REDIS_PASSWORD"],
-        "SSL": is_truthy(os.environ.get("REDIS_SSL", False)),
+        "PASSWORD": os.getenv("REDIS_PASSWORD", ""),
+        "SSL": os.getenv("REDIS_SSL", False),
         "DEFAULT_TIMEOUT": 300,
     },
 }
 
 # Nautobot uses Cacheops for database query caching. These are the following defaults.
 # For detailed configuration see: https://github.com/Suor/django-cacheops#setup
-# REDIS_URL used for healthchecks
-if is_truthy(os.environ.get("REDIS_SSL", False)):
-    REDIS_PROTOCOL = "rediss://"
-else:
-    REDIS_PROTOCOL = "redis://"
-CACHEOPS_REDIS = f"{REDIS_PROTOCOL}://{os.environ['REDIS_HOST']}:{os.environ.get('REDIS_PORT', 6379)}/1"
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = os.getenv("REDIS_PORT", 6379)
+REDIS_PASS = os.getenv("REDIS_PASSWORD", "")
+CACHEOPS_REDIS = f"redis://:{REDIS_PASS}@{REDIS_HOST}:{REDIS_PORT}/1"
 
 # This key is used for secure generation of random numbers and strings. It must never be exposed outside of this file.
 # For optimal security, SECRET_KEY should be at least 50 characters in length and contain a mix of letters, numbers, and
 # symbols. Nautobot will not run without this defined. For more information, see
 # https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-SECRET_KEY
 SECRET_KEY = os.environ["SECRET_KEY"]
+
 
 #########################
 #                       #
@@ -159,8 +172,11 @@ BANNER_LOGIN = os.environ.get("BANNER_LOGIN", "")
 # BASE_PATH = 'nautobot/'
 BASE_PATH = os.environ.get("BASE_PATH", "")
 
-# Cache timeout in seconds. Set to 0 to dissable caching. Defaults to 900 (15 minutes)
+# Cache timeout in seconds. Cannot be 0. Defaults to 900 (15 minutes). To disable caching, set CACHEOPS_ENABLED to False
 CACHEOPS_DEFAULTS = {"timeout": 900}
+
+# Set to False to disable caching with cacheops. (Default: True)
+CACHEOPS_ENABLED = True
 
 # Maximum number of days to retain logged changes. Set to 0 to retain changes indefinitely. (Default: 90)
 CHANGELOG_RETENTION = int(os.environ.get("CHANGELOG_RETENTION", 90))
@@ -175,6 +191,7 @@ CORS_ORIGIN_ALLOW_ALL = is_truthy(os.environ.get("CORS_ORIGIN_ALLOW_ALL", False)
 CORS_ALLOWED_ORIGINS = [
     # 'https://hostname.example.com',
 ]
+
 # A list of strings representing regexes that match Origins that are authorized to make cross-site
 # HTTP requests. Defaults to [].
 CORS_ALLOWED_ORIGIN_REGEXES = [
@@ -203,10 +220,6 @@ EXEMPT_VIEW_PERMISSIONS = [
     # 'ipam.prefix',
 ]
 
-# A list of strings designating all applications that are enabled in this Django installation. Each string should be a dotted Python path to an application configuration class (preferred), or a package containing an application.
-# http://nautobot.readthedocs.io/configuration/optional-settings/#extra-applications
-EXTRA_INSTALLED_APPS = []
-
 # HTTP proxies Nautobot should use when sending outbound HTTP requests (e.g. for webhooks).
 # HTTP_PROXIES = {
 #     'http': 'http://10.10.1.10:3128',
@@ -216,10 +229,6 @@ EXTRA_INSTALLED_APPS = []
 # IP addresses recognized as internal to the system. The debugging toolbar will be available only to clients accessing
 # Nautobot from an internal IP.
 INTERNAL_IPS = ("127.0.0.1", "::1")
-
-# The file path where jobs will be stored. A trailing slash is not needed. Note that the default value of
-# this setting is derived from the installed location.
-JOBS_ROOT = os.environ.get("JOBS_ROOT", os.path.expanduser("~/.nautobot/jobs"))
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "DEBUG" if DEBUG else "INFO")
 
@@ -239,12 +248,8 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
 }
 
-# Setting this to True will permit only authenticated users to access any part of Nautobot. By default, anonymous users
-# are permitted to access most data in Nautobot (excluding secrets) but not make any changes.
-LOGIN_REQUIRED = is_truthy(os.environ.get("LOGIN_REQUIRED", False))
-
 # Setting this to True will display a "maintenance mode" banner at the top of every page.
-MAINTENANCE_MODE = is_truthy(os.environ.get("MAINTENANCE_MODE", False))
+MAINTENANCE_MODE = False
 
 # An API consumer can request an arbitrary number of objects =by appending the "limit" parameter to the URL (e.g.
 # "?limit=1000"). This setting defines the maximum limit. Setting it to 0 or None will allow an API consumer to request
@@ -253,10 +258,20 @@ MAX_PAGE_SIZE = int(os.environ.get("MAX_PAGE_SIZE", 1000))
 
 # The file path where uploaded media such as image attachments are stored. A trailing slash is not needed. Note that
 # the default value of this setting is within the invoking user's home directory
-MEDIA_ROOT = os.environ.get("MEDIA_ROOT", os.path.expanduser("~/.nautobot/media"))
+# MEDIA_ROOT = os.path.expanduser('~/.nautobot/media')
+
+# By default uploaded media is stored on the local filesystem. Using Django-storages is also supported. Provide the
+# class path of the storage driver in STORAGE_BACKEND and any configuration options in STORAGE_CONFIG. For example:
+# STORAGE_BACKEND = 'storages.backends.s3boto3.S3Boto3Storage'
+# STORAGE_CONFIG = {
+#     'AWS_ACCESS_KEY_ID': 'Key ID',
+#     'AWS_SECRET_ACCESS_KEY': 'Secret',
+#     'AWS_STORAGE_BUCKET_NAME': 'nautobot',
+#     'AWS_S3_REGION_NAME': 'eu-west-1',
+# }
 
 # Expose Prometheus monitoring metrics at the HTTP endpoint '/metrics'
-METRICS_ENABLED = True
+METRICS_ENABLED = False
 
 # Credentials that Nautobot will uses to authenticate to devices when connecting via NAPALM.
 NAPALM_USERNAME = os.environ.get("NAPALM_USERNAME", "")
@@ -267,10 +282,7 @@ NAPALM_TIMEOUT = int(os.environ.get("NAPALM_TIMEOUT", 30))
 
 # NAPALM optional arguments (see https://napalm.readthedocs.io/en/latest/support/#optional-arguments). Arguments must
 # be provided as a dictionary.
-NAPALM_ARGS = {
-    "secret": NAPALM_PASSWORD,
-    # Include any additional args here
-}
+NAPALM_ARGS = {}
 
 # Determine how many objects to display per page within a list. (Default: 50)
 PAGINATE_COUNT = int(os.environ.get("PAGINATE_COUNT", 50))
@@ -278,7 +290,6 @@ PAGINATE_COUNT = int(os.environ.get("PAGINATE_COUNT", 50))
 # Enable installed plugins. Add the name of each plugin to the list.
 PLUGINS = ["nautobot_plugin_nornir", "nautobot_golden_config"]
 
-# Enable installed plugins. Add the name of each plugin to the list.
 # Plugins configuration settings. These settings are used by various plugins that the user may have installed.
 # Each key in the dictionary is the name of an installed plugin and its value is a dictionary of settings.
 PLUGINS_CONFIG = {
@@ -294,7 +305,6 @@ PLUGINS_CONFIG = {
         },
     },
     "nautobot_golden_config": {
-        "allowed_os": os.environ.get("ALLOWED_OS", "all").split(","),
         "per_feature_bar_width": float(os.environ.get("PER_FEATURE_BAR_WIDTH", 0.15)),
         "per_feature_width": int(os.environ.get("PER_FEATURE_WIDTH", 13)),
         "per_feature_height": int(os.environ.get("PER_FEATURE_HEIGHT", 4)),
@@ -346,21 +356,11 @@ SESSION_FILE_PATH = None
 # Configure SSO, for more information see docs/configuration/authentication/sso.md
 SOCIAL_AUTH_ENABLED = False
 
-# By default uploaded media is stored on the local filesystem. Using Django-storages is also supported. Provide the
-# class path of the storage driver in STORAGE_BACKEND and any configuration options in STORAGE_CONFIG. For example:
-# STORAGE_BACKEND = 'storages.backends.s3boto3.S3Boto3Storage'
-# STORAGE_CONFIG = {
-#     'AWS_ACCESS_KEY_ID': 'Key ID',
-#     'AWS_SECRET_ACCESS_KEY': 'Secret',
-#     'AWS_STORAGE_BUCKET_NAME': 'nautobot',
-#     'AWS_S3_REGION_NAME': 'eu-west-1',
-# }
-
 # Time zone (default: UTC)
 TIME_ZONE = os.environ.get("TIME_ZONE", "UTC")
 
 # Date/time formatting. See the following link for supported formats:
-# https://docs.djangoproject.com/en/dev/ref/templates/builtins/#date
+# https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date
 DATE_FORMAT = os.environ.get("DATE_FORMAT", "N j, Y")
 SHORT_DATE_FORMAT = os.environ.get("SHORT_DATE_FORMAT", "Y-m-d")
 TIME_FORMAT = os.environ.get("TIME_FORMAT", "g:i a")
@@ -368,6 +368,14 @@ SHORT_TIME_FORMAT = os.environ.get("SHORT_TIME_FORMAT", "H:i:s")
 DATETIME_FORMAT = os.environ.get("DATETIME_FORMAT", "N j, Y g:i a")
 SHORT_DATETIME_FORMAT = os.environ.get("SHORT_DATETIME_FORMAT", "Y-m-d H:i")
 
+# A list of strings designating all applications that are enabled in this Django installation. Each string should be a dotted Python path to an application configuration class (preferred), or a package containing an application.
+# https://nautobot.readthedocs.io/en/latest/configuration/optional-settings/#extra-applications
+EXTRA_INSTALLED_APPS = os.environ["EXTRA_INSTALLED_APPS"].split(",") if os.environ.get("EXTRA_INSTALLED_APPS") else []
+
 # Django Debug Toolbar
-TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG and not TESTING}
+
+if "debug_toolbar" not in EXTRA_INSTALLED_APPS:
+    EXTRA_INSTALLED_APPS.append("debug_toolbar")
+if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")

@@ -14,5 +14,3 @@ CONFIG_FEATURES = {
     "backup": ENABLE_BACKUP,
     "sotagg": ENABLE_SOTAGG,
 }
-
-ALLOWED_OS = PLUGIN_CFG["allowed_os"]

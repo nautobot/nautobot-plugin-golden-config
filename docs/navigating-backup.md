@@ -41,9 +41,9 @@ The credentials/secrets management is further described within the [nautbot-plug
 repo. For the simplist use case you can set environment variables for `NAPALM_USERNAME`, `NAPALM_PASSWORD`, and `DEVICE_SECRET`. For more
 complicated use cases, please refer to the plugin documentation linked above.
 
-# Remove Settings
+# Line Removals
 
-The remove settings is a series of regex patterns to identify lines that should be removed. This is helpful as there are usually parts of the
+The line removals settings is a series of regex patterns to identify lines that should be removed. This is helpful as there are usually parts of the
 configurations that will change each time. A match simply means to remove.
 
 In order to specify line removals. Navigate to **Plugins -> Line Removals**.  Click the **Add** button and fill out the details.
@@ -51,10 +51,16 @@ In order to specify line removals. Navigate to **Plugins -> Line Removals**.  Cl
 The remove setting is based on `Platform`.  An example is shown below.
 ![Line Removals View](./img/00-navigating-backup.png)
 
-# Replace Lines
+# Line Replacements
 
 This is a replacement config with a regex pattern with a single capture groups to replace. This is helpful to strip out secrets.
 
 The replace lines setting is based on `Platform`.  An example is shown below.
 
 ![Line Replacements View](./img/01-navigating-backup.png)
+
+The line replace uses Python's `re.sub` method. As shown, a common pattern is to obtain the non-confidential data in a capture group e.g. `()`, and return the rest of the string returned in the backrefence, e.g. `\2`.
+
+```python
+re.sub(r"(username\s+\S+\spassword\s+5\s+)\S+(\s+role\s+\S+)", r"\1<redacted_config>\2", config, flags=re.MULTILINE))
+```

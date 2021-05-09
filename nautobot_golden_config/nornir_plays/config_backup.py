@@ -13,12 +13,17 @@ from nornir_nautobot.utils.logger import NornirLogger
 from nautobot_plugin_nornir.plugins.inventory.nautobot_orm import NautobotORMInventory
 from nautobot_plugin_nornir.constants import NORNIR_SETTINGS
 
-from nautobot_golden_config.utilities.helper import get_allowed_os, verify_global_settings, check_jinja_template
+from nautobot_golden_config.utilities.helper import (
+    get_job_filter,
+    get_dispatcher,
+    verify_global_settings,
+    check_jinja_template,
+)
 from nautobot_golden_config.models import (
     GoldenConfigSettings,
     GoldenConfiguration,
-    BackupConfigLineRemove,
-    BackupConfigLineReplace,
+    ConfigRemove,
+    ConfigReplace,
 )
 from .processor import ProcessGoldenConfig
 
@@ -58,6 +63,7 @@ def run_backup(  # pylint: disable=too-many-arguments
             method="check_connectivity",
             obj=obj,
             logger=logger,
+            default_drivers_mapping=get_dispatcher(),
         )
     running_config = task.run(
         task=dispatcher,
@@ -68,6 +74,7 @@ def run_backup(  # pylint: disable=too-many-arguments
         backup_file=backup_file,
         remove_lines=remove_regex_dict.get(obj.platform.slug, []),
         substitute_lines=replace_regex_dict.get(obj.platform.slug, []),
+        default_drivers_mapping=get_dispatcher(),
     )[1].result["config"]
 
     backup_obj.backup_last_success_date = task.host.defaults.data["now"]
@@ -82,20 +89,22 @@ def config_backup(job_result, data, backup_root_folder):
     """Nornir play to backup configurations."""
     now = datetime.now()
     logger = NornirLogger(__name__, job_result, data.get("debug"))
-    global_settings = GoldenConfigSettings.objects.get(id="aaaaaaaa-0000-0000-0000-000000000001")
+    global_settings = GoldenConfigSettings.objects.first()
     verify_global_settings(logger, global_settings, ["backup_path_template", "intended_path_template"])
+
+    # Build a dictionary, with keys of platform.slug, and the regex line in it for the netutils func.
     remove_regex_dict = {}
-    for regex in BackupConfigLineRemove.objects.all():
+    for regex in ConfigRemove.objects.all():
         if not remove_regex_dict.get(regex.platform.slug):
             remove_regex_dict[regex.platform.slug] = []
-        remove_regex_dict[regex.platform.slug].append(regex.regex_line)
+        remove_regex_dict[regex.platform.slug].append({"regex": regex.regex_line})
+
+    # Build a dictionary, with keys of platform.slug, and the regex and replace keys for the netutils func.
     replace_regex_dict = {}
-    for regex in BackupConfigLineReplace.objects.all():
+    for regex in ConfigReplace.objects.all():
         if not replace_regex_dict.get(regex.platform.slug):
             replace_regex_dict[regex.platform.slug] = []
-        replace_regex_dict[regex.platform.slug].append(
-            {"regex_replacement": regex.replaced_text, "regex_search": regex.substitute_text}
-        )
+        replace_regex_dict[regex.platform.slug].append({"replace": regex.replaced_text, "regex": regex.substitute_text})
     nornir_obj = InitNornir(
         runner=NORNIR_SETTINGS.get("runner"),
         logging={"enabled": False},
@@ -104,7 +113,7 @@ def config_backup(job_result, data, backup_root_folder):
             "options": {
                 "credentials_class": NORNIR_SETTINGS.get("credentials"),
                 "params": NORNIR_SETTINGS.get("inventory_params"),
-                "queryset": get_allowed_os(data),
+                "queryset": get_job_filter(data),
                 "defaults": {"now": now},
             },
         },

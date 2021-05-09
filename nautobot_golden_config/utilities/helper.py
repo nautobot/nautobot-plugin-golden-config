@@ -5,10 +5,13 @@ from jinja2 import Template, StrictUndefined, UndefinedError
 from jinja2.exceptions import TemplateError, TemplateSyntaxError
 
 from nornir_nautobot.exceptions import NornirNautobotException
+from nornir_nautobot.plugins.tasks.dispatcher import _DEFAULT_DRIVERS_MAPPING
 from nautobot.dcim.filters import DeviceFilterSet
-from nautobot.dcim.models import Device, Platform
+from nautobot.dcim.models import Device
 
-from .constant import ALLOWED_OS
+from nautobot_golden_config import models
+from nautobot_golden_config.utilities.constant import PLUGIN_CFG
+
 
 FIELDS = {
     "platform",
@@ -25,7 +28,7 @@ FIELDS = {
 }
 
 
-def get_allowed_os(data=None):
+def get_job_filter(data=None):
     """Helper function to return a the filterable list of OS's based on platform.slug and a specific custom value."""
     if not data:
         data = {}
@@ -33,25 +36,21 @@ def get_allowed_os(data=None):
     for field in FIELDS:
         if data.get(field):
             query[f"{field}_id"] = data[field].values_list("pk", flat=True)
-
     # Handle case where object is from single device run all.
     if data.get("device") and isinstance(data["device"], Device):
         query.update({"id": [str(data["device"].pk)]})
     elif data.get("device"):
         query.update({"id": data["device"].values_list("pk", flat=True)})
 
-    if "all" in ALLOWED_OS:
-        _allowed_os = Platform.objects.values_list("slug", flat=True)
-    else:
-        _allowed_os = ALLOWED_OS
-    return DeviceFilterSet(data=query, queryset=Device.objects.filter(platform__slug__in=_allowed_os)).qs
+    base_qs = models.GoldenConfigSettings.objects.first().get_queryset()
+    return DeviceFilterSet(data=query, queryset=base_qs).qs
 
 
-def get_allowed_os_from_nested():
-    """Helper method to filter out only in scope OS's."""
-    if "all" in ALLOWED_OS:
-        return {"device__platform__slug__in": Platform.objects.values_list("slug", flat=True)}
-    return {"device__platform__slug__in": ALLOWED_OS}
+def get_dispatcher():
+    """Helper method to load the dispatcher from nautobot nornir or config if defined."""
+    if PLUGIN_CFG.get("dispatcher_mapping"):
+        return PLUGIN_CFG["dispatcher_mapping"]
+    return _DEFAULT_DRIVERS_MAPPING
 
 
 def null_to_empty(val):

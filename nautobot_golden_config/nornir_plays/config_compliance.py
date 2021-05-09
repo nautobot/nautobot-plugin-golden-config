@@ -6,22 +6,20 @@ import os
 
 from datetime import datetime
 
+from netutils.config.compliance import parser_map, section_config, _open_file_config
 from nornir import InitNornir
 from nornir.core.plugins.inventory import InventoryPluginRegister
 from nornir.core.task import Result, Task
 
-from nornir_nautobot.plugins.tasks.dispatcher import dispatcher
-from nornir_nautobot.plugins.tasks.dispatcher.utils.compliance import parser_map
 from nornir_nautobot.utils.logger import NornirLogger
 from nornir_nautobot.exceptions import NornirNautobotException
 
 from nautobot_plugin_nornir.plugins.inventory.nautobot_orm import NautobotORMInventory
 from nautobot_plugin_nornir.constants import NORNIR_SETTINGS
 
-from nautobot_golden_config.models import ComplianceFeature, ConfigCompliance, GoldenConfigSettings, GoldenConfiguration
+from nautobot_golden_config.models import ComplianceRule, ConfigCompliance, GoldenConfigSettings, GoldenConfiguration
 from nautobot_golden_config.utilities.helper import (
-    get_allowed_os,
-    null_to_empty,
+    get_job_filter,
     verify_global_settings,
     check_jinja_template,
 )
@@ -36,13 +34,11 @@ def get_features():
     """A serializer of sorts to return feature mappings as a dictionary."""
     # TODO: Review if creating a proper serializer is the way to go.
     features = {}
-    for obj in ComplianceFeature.objects.all():
+    for obj in ComplianceRule.objects.all():
         platform = str(obj.platform.slug)
         if not features.get(platform):
             features[platform] = []
-        features[platform].append(
-            {"ordered": obj.config_ordered, "name": obj.name, "section": obj.match_config.splitlines()}
-        )
+        features[platform].append({"ordered": obj.config_ordered, "obj": obj, "section": obj.match_config.splitlines()})
     return features
 
 
@@ -95,40 +91,25 @@ def run_compliance(  # pylint: disable=too-many-arguments,too-many-locals
         logger.log_failure(obj, f"There is currently no parser support for platform slug {platform}.")
         raise NornirNautobotException()
 
-    feature_data = task.run(
-        task=dispatcher,
-        name="GET COMPLIANCE FOR CONFIG",
-        method="compliance_config",
-        obj=obj,
-        logger=logger,
-        backup_file=backup_file,
-        intended_file=intended_file,
-        features=features[platform],
-        platform=platform,
-    )[1].result["feature_data"]
+    backup_cfg = _open_file_config(backup_file)
+    intended_cfg = _open_file_config(intended_file)
 
-    for feature, value in feature_data.items():
-        defaults = {
-            "actual": null_to_empty(value["actual"]),
-            "intended": null_to_empty(value["intended"]),
-            "missing": null_to_empty(value["missing"]),
-            "extra": null_to_empty(value["extra"]),
-            "compliance": value["compliant"],
-            "ordered": value["ordered_compliant"],
-        }
+    # TODO: Make this atomic with compliance_obj step.
+    for feature in features[obj.platform.slug]:
         # using update_or_create() method to conveniently update actual obj or create new one.
         ConfigCompliance.objects.update_or_create(
             device=obj,
-            feature=feature,
-            defaults=defaults,
+            rule=feature["obj"],
+            actual=section_config(feature, backup_cfg, platform),
+            intended=section_config(feature, intended_cfg, platform),
         )
 
     compliance_obj.compliance_last_success_date = task.host.defaults.data["now"]
     compliance_obj.compliance_config = "\n".join(diff_files(backup_file, intended_file))
     compliance_obj.save()
-    logger.log_success(obj, "Successfully tested complinace.")
+    logger.log_success(obj, "Successfully tested compliance.")
 
-    return Result(host=task.host, result=feature_data)
+    return Result(host=task.host)
 
 
 def config_compliance(job_result, data, backup_root_path, intended_root_folder):
@@ -136,7 +117,7 @@ def config_compliance(job_result, data, backup_root_path, intended_root_folder):
     now = datetime.now()
     features = get_features()
     logger = NornirLogger(__name__, job_result, data.get("debug"))
-    global_settings = GoldenConfigSettings.objects.get(id="aaaaaaaa-0000-0000-0000-000000000001")
+    global_settings = GoldenConfigSettings.objects.first()
     verify_global_settings(logger, global_settings, ["backup_path_template", "intended_path_template"])
     nornir_obj = InitNornir(
         runner=NORNIR_SETTINGS.get("runner"),
@@ -146,7 +127,7 @@ def config_compliance(job_result, data, backup_root_path, intended_root_folder):
             "options": {
                 "credentials_class": NORNIR_SETTINGS.get("credentials"),
                 "params": NORNIR_SETTINGS.get("inventory_params"),
-                "queryset": get_allowed_os(data),
+                "queryset": get_job_filter(data),
                 "defaults": {"now": now},
             },
         },

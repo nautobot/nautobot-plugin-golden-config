@@ -30,7 +30,7 @@ There are many features and capabilities the plugin provides into the Nautobot e
 
 The golden configuration is driven by jobs that run a series of tasks and the result is captured in this overview.
 
-![Compliance Feature](./docs/img/golden-overview.png)
+![Compliance Rule](./docs/img/golden-overview.png)
 
 The compliance report provides a high-level overview on the compliance of your network.
 ![Compliance Report](./docs/img/compliance-report.png)
@@ -41,15 +41,13 @@ The compliance overview will provide a per device and feature overview on the co
 Drilling into a specific device and feature, you can get an immediate detailed understanding of your device.
 ![Compliance Device](./docs/img/compliance-device.png)
 
-![Compliance Feature](./docs/img/compliance-feature.png)
+![Compliance Rule](./docs/img/compliance-rule.png)
 
 ## Plugin Settings
 
-There are three primary controls to determine the inclusion of a device within one of the four given components.
+There is a setting to determine the inclusion of any of the four given components.
 
-* The `allowed_os` will allow list the specific operating systems that can be included.
 * The `enable_backup`, `enable_compliance`, `enable_intended`, and `enable_sotagg` will toggle inclusion of the entire component.
-* Coming Soon: There is the ability to manage on a per device.
 
 # Installation
 
@@ -79,7 +77,6 @@ PLUGINS_CONFIG = {
         },
     },
     "nautobot_golden_config": {
-        "allowed_os": ["all"], # Should be limited to list of supported network operating systems
         "per_feature_bar_width": 0.15,
         "per_feature_width": 13,
         "per_feature_height": 4,
@@ -88,6 +85,7 @@ PLUGINS_CONFIG = {
         "enable_intended": True,
         "enable_sotagg": True,
         "sot_agg_transposer": None,
+        "default_drivers_mapping": None,
     },
 }
 
@@ -97,17 +95,17 @@ The plugin behavior can be controlled with the following list of settings.
 
 | Key     | Example | Default | Description                          |
 | ------- | ------ | -------- | ------------------------------------- |
-| allowed_os | [cisco_ios, arista_eos] | [all] | A list of platforms supported, identified by the `platform_slug`, with special consideration for `all`. |
 | enable_backup | True | True | A boolean to represent whether or not to run backup configurations within the plugin. |
 | enable_compliance | True | True | A boolean to represent whether or not to run the compliance process within the plugin. |
 | enable_intended | True | True | A boolean to represent whether or not to generate intended configurations within the plugin. |
 | enable_sotagg | True | True | A boolean to represent whether or not to provide a GraphQL query per device to allow the intended configuration to provide data variables to the plugin. |
+| default_drivers_mapping | {"newos": "dispatcher.newos"} | None | A dictionary in which the key is a platform slug and the value is the import path of the dispatcher in string format|
+| sot_agg_transposer | mypkg.transposer | - | A string representation of a function that can post-process the graphQL data. |
 | per_feature_bar_width | 0.15 | 0.15 | The width of the table bar within the overview report | 
 | per_feature_width | 13 | 13 | The width in inches that the overview table can be. | 
 | per_feature_height | 4 | 4 | The height in inches that the overview table can be. | 
-| sot_agg_transposer | mypkg.transposer | - | A string representation of a function that can post-process the graphQL data. |
 
-> Note: Over time the intention is to make the compliance report more dynamic, but for now allow users to configure in a way that fits best for them.
+> Note: Over time the intention is to make the compliance report more dynamic, but for now allow users to configure the `per_*` configs in a way that fits best for them.
 
 # Contributing
 

@@ -5,28 +5,29 @@ from django.db.models import Subquery
 
 from nautobot.dcim.models import Device, Platform, Region, Site, DeviceRole, DeviceType, Manufacturer, Rack, RackGroup
 from nautobot.extras.models import Status
-from nautobot.extras.forms import CustomFieldFilterForm
+import nautobot.extras.forms as extras_forms
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.utilities.forms import BootstrapMixin, DynamicModelMultipleChoiceField, DynamicModelChoiceField
 
 from .models import (
     ConfigCompliance,
+    ComplianceRule,
     ComplianceFeature,
     GoldenConfigSettings,
     GoldenConfiguration,
-    BackupConfigLineRemove,
-    BackupConfigLineReplace,
+    ConfigRemove,
+    ConfigReplace,
 )
 
 
 class SettingsFeatureFilterForm(BootstrapMixin, forms.Form):
-    """Form for ComplianceFeature instances."""
+    """Form for ComplianceRule instances."""
 
     platform = DynamicModelChoiceField(queryset=Platform.objects.all(), required=False)
     name = forms.CharField(required=False)
 
 
-class GoldenConfigurationFilterForm(BootstrapMixin, CustomFieldFilterForm):
+class GoldenConfigurationFilterForm(BootstrapMixin, extras_forms.CustomFieldFilterForm):
     """Filter Form for GoldenConfiguration instances."""
 
     model = GoldenConfiguration
@@ -121,28 +122,45 @@ class ConfigComplianceFilterForm(GoldenConfigurationFilterForm):
     )
 
 
+class ComplianceRuleFilterForm(SettingsFeatureFilterForm):
+    """Form for ComplianceRule instances."""
+
+    model = ComplianceRule
+
+
+class ComplianceRuleForm(BootstrapMixin, forms.ModelForm):
+    """Filter Form for ComplianceRule instances."""
+
+    platform = DynamicModelChoiceField(queryset=Platform.objects.all())
+
+    class Meta:
+        """Boilerplate form Meta data for compliance rule."""
+
+        model = ComplianceRule
+        fields = (
+            "platform",
+            "feature",
+            "description",
+            "config_ordered",
+            "match_config",
+            "config_type",
+        )
+
+
 class ComplianceFeatureFilterForm(SettingsFeatureFilterForm):
     """Form for ComplianceFeature instances."""
 
     model = ComplianceFeature
 
 
-class ComplianceFeatureForm(BootstrapMixin, forms.ModelForm):
+class ComplianceFeatureForm(BootstrapMixin, extras_forms.CustomFieldModelForm, extras_forms.RelationshipModelForm):
     """Filter Form for ComplianceFeature instances."""
-
-    platform = DynamicModelChoiceField(queryset=Platform.objects.all())
 
     class Meta:
         """Boilerplate form Meta data for compliance feature."""
 
         model = ComplianceFeature
-        fields = (
-            "platform",
-            "name",
-            "description",
-            "config_ordered",
-            "match_config",
-        )
+        fields = ("name", "slug", "description")
 
 
 class GoldenConfigSettingsFeatureForm(BootstrapMixin, forms.ModelForm):
@@ -153,16 +171,19 @@ class GoldenConfigSettingsFeatureForm(BootstrapMixin, forms.ModelForm):
 
         model = GoldenConfigSettings
         fields = (
+            "backup_repository",
             "backup_path_template",
+            "intended_repository",
             "intended_path_template",
+            "jinja_repository",
             "jinja_path_template",
             "backup_test_connectivity",
-            "shorten_sot_query",
+            "scope",
             "sot_agg_query",
         )
 
 
-class BackupLineRemovalForm(BootstrapMixin, forms.ModelForm):
+class ConfigRemoveForm(BootstrapMixin, forms.ModelForm):
     """Filter Form for Line Removal instances."""
 
     platform = DynamicModelChoiceField(queryset=Platform.objects.all())
@@ -170,7 +191,7 @@ class BackupLineRemovalForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         """Boilerplate form Meta data for removal feature."""
 
-        model = BackupConfigLineRemove
+        model = ConfigRemove
         fields = (
             "platform",
             "name",
@@ -187,7 +208,7 @@ class BackupLineReplaceForm(BootstrapMixin, forms.ModelForm):
     class Meta:
         """Boilerplate form Meta data for removal feature."""
 
-        model = BackupConfigLineReplace
+        model = ConfigReplace
         fields = (
             "platform",
             "name",
@@ -197,13 +218,55 @@ class BackupLineReplaceForm(BootstrapMixin, forms.ModelForm):
         )
 
 
-class LineRemoveFeatureFilterForm(SettingsFeatureFilterForm):
+class ConfigRemoveFeatureFilterForm(SettingsFeatureFilterForm):
     """Filter Form for Line Removal."""
 
-    model = BackupConfigLineRemove
+    model = ConfigRemove
 
 
-class LineReplaceFeatureFilterForm(SettingsFeatureFilterForm):
+class ConfigReplaceFeatureFilterForm(SettingsFeatureFilterForm):
     """Filter Form for Line Replacement."""
 
-    model = BackupConfigLineReplace
+    model = ConfigReplace
+
+
+class ConfigRemoveCSVForm(extras_forms.CustomFieldModelCSVForm):
+    """CSV Form for ConfigRemove instances."""
+
+    class Meta:
+        """Boilerplate form Meta data for application feature."""
+
+        model = ConfigRemove
+        fields = ConfigRemove.csv_headers
+
+
+class ConfigRemoveBulkEditForm(BootstrapMixin, extras_forms.AddRemoveTagsForm, extras_forms.CustomFieldBulkEditForm):
+    """BulkEdit form for ConfigRemove instances."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=ConfigRemove.objects.all(), widget=forms.MultipleHiddenInput)
+
+    class Meta:
+        """Boilerplate form Meta data for application feature."""
+
+        nullable_fields = []
+
+
+class ConfigReplaceCSVForm(extras_forms.CustomFieldModelCSVForm):
+    """CSV Form for ConfigReplace instances."""
+
+    class Meta:
+        """Boilerplate form Meta data for application feature."""
+
+        model = ConfigReplace
+        fields = ConfigReplace.csv_headers
+
+
+class ConfigReplaceBulkEditForm(BootstrapMixin, extras_forms.AddRemoveTagsForm, extras_forms.CustomFieldBulkEditForm):
+    """BulkEdit form for ConfigReplace instances."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=ConfigReplace.objects.all(), widget=forms.MultipleHiddenInput)
+
+    class Meta:
+        """Boilerplate form Meta data for application feature."""
+
+        nullable_fields = []

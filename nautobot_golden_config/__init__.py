@@ -19,7 +19,6 @@ class GoldenConfiguration(PluginConfig):
     # min_version = "0"
     # max_version = "100"
     default_settings = {
-        "allowed_os": ["all"],
         "enable_backup": True,
         "enable_golden": True,
         "enable_compliance": True,
